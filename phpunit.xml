@@ -1,0 +1,11 @@
+<phpunit bootstrap="alti.php" 
+         colors="true"
+         convertErrorsToExceptions="true"
+         convertNoticesToExceptions="true"
+         convertWarningsToExceptions="true"
+         stopOnFailure="true"
+>
+    <testsuite name="alti">
+        <directory suffix=".php">./tests</directory>
+    </testsuite>
+</phpunit>
