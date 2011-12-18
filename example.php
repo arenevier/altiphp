@@ -24,9 +24,9 @@
     // you can define multiple points, and get an array of altitudes
     var_dump($service->altitude(array(array(2.4606, 48.70408), array(2.46338, 48.70815)))); // an array with 2 altitudes
 
-    // by passing TRUE as $interpolate argument, extra points will be added to
-    // use maximal resolution available, and get a more accurate profile
-    var_dump($service->altitude(array(array(2.4606, 48.70408), array(2.46338, 48.70815)), TRUE)); // an array with 2 or more altitudes
+    // you can interpolate a component; extra points will be added to use
+    // maximal resolution available, and get a more accurate profile
+    var_dump($service->interpolate(array(array(2.4606, 48.70408), array(2.46338, 48.70815)))); // an array with 2 or more altitudes
 
     // you can check wether an area is covered by data. This allow checking
     // quickly if altitude may be unavailable without computing it for real.

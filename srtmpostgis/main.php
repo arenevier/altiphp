@@ -72,6 +72,7 @@ class SrtmpostgisDataSource implements DataSource {
      * @return int|null
      */
     protected function dbAltitude($pos) {
+        print $pos . "\n";
         if (!($result = @pg_execute($this->dbconn, "altitude_stmt", array((int)($pos))))) {
             throw new \Exception("could not execute query");
         }

@@ -112,13 +112,20 @@ class Alti {
     }
 
     /**
-     * pre-process an array of points by adding extra points to the route, so
+     * interpolate an array of points by adding extra points to the route, so
      * that points are not separated by more than source precision.
      *
-     * @param array $path array of points
+     * @param gisconverter\Geometry|array  gisconverter\Geometry or
+     *                                     array containing multiple components
      * @return array with points added if needed
      */
-    protected function preProcessPath(array $path) {
+    public function interpolate($path) {
+        if ($path instanceof \gisconverter\Point) {
+            return array($path->lon, $path->lat);
+        } else if ($path instanceof \gisconverter\Geometry) {
+            return $this->interpolate($path->components);
+        }
+
         $precision = $this->source->getPrecision();
         $prev = null;
         $curr = null;
@@ -157,16 +164,12 @@ class Alti {
      *                                               array containing two coordinates or
      *                                               gisconverter\Geometry or
      *                                               array containing multiple components
-     * @param bool|float $interpolate route or point latitude. 
-     *                                BEWARE: If interpolate is true, $arg will
-     *                                be modified, so caller can know which
-     *                                points were added.
+     * @param bool $lon optional latitude if $arg is a longitude
      * @return float or array()
      */
-    public function altitude($arg, $interpolate = FALSE) {
-        if (is_numeric($arg) and is_numeric($interpolate)) {
+    public function altitude($arg, $lat = null) {
+        if (is_numeric($arg) and is_numeric($lat)) {
             $lon = $arg;
-            $lat = $interpolate;
             if ($lon < -180 or $lon > 180 or $lat < -90 or $lat > 90) {
                 throw new \InvalidArgumentException();
             }
@@ -174,14 +177,9 @@ class Alti {
         } else if (is_array($arg) and (count($arg) == 2) and is_numeric($arg[0]) and is_numeric($arg[1])) {
             return $this->source->altitude($arg[0], $arg[1]);
         } else if (is_array($arg)) {
-            // preprocess array to add points if needed
-            if ($interpolate) {
-                $arg = $this->preProcessPath(&$arg);
-            }
-
             $res = array();
             foreach ($arg as $comp) {
-                $altitude = $this->altitude($comp, $interpolate);
+                $altitude = $this->altitude($comp);
                 if (is_null($altitude)) { // altitude could not be computed
                     return null;
                 }
@@ -191,7 +189,7 @@ class Alti {
         } else if ($arg instanceof \gisconverter\Point) {
             return $this->source->altitude($arg->lon, $arg->lat);
         } else if ($arg instanceof \gisconverter\Geometry) {
-            return $this->altitude($arg->components, $interpolate);
+            return $this->altitude($arg->components);
         } else {
             throw new \InvalidArgumentException();
         }
@@ -204,20 +202,16 @@ class Alti {
      *                                               array containing two coordinates or
      *                                               gisconverter\Geometry or
      *                                               array containing multiple components
-     * @param bool|float $interpolate route or point latitude
+     * @param bool $lon optional latitude if $arg is a longitude
      * @return bool
      */
-    public function isCovered($arg, $interpolate = FALSE) {
-        if (is_numeric($arg) and is_numeric($interpolate)) {
+    public function isCovered($arg, $lat = null) {
+        if (is_numeric($arg) and is_numeric($lat)) {
             $lon = $arg;
-            $lat = $interpolate;
             return $this->source->isCovered($lon, $lat);
         } else if (is_array($arg) and count($arg) == 2 and is_numeric($arg[0]) and is_numeric($arg[1])) {
             return $this->source->isCovered($arg[0], $arg[1]);
         } else if (is_array($arg)) {
-            if ($interpolate) {
-                $arg = $this->preProcessPath($arg);
-            }
             foreach ($arg as $item) {
                 if (!$this->isCovered($item)) {
                     return FALSE;
