@@ -146,6 +146,7 @@ class Alti {
             }
             $res[] = $comp;
         }
+        $path = $res;
         return $res;
     }
 
@@ -156,7 +157,10 @@ class Alti {
      *                                               array containing two coordinates or
      *                                               gisconverter\Geometry or
      *                                               array containing multiple components
-     * @param bool|float $interpolate route or point latitude
+     * @param bool|float $interpolate route or point latitude. 
+     *                                BEWARE: If interpolate is true, $arg will
+     *                                be modified, so caller can know which
+     *                                points were added.
      * @return float or array()
      */
     public function altitude($arg, $interpolate = FALSE) {
@@ -172,7 +176,7 @@ class Alti {
         } else if (is_array($arg)) {
             // preprocess array to add points if needed
             if ($interpolate) {
-                $arg = $this->preProcessPath($arg);
+                $arg = $this->preProcessPath(&$arg);
             }
 
             $res = array();
