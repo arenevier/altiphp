@@ -80,6 +80,13 @@ class AltiTest extends PHPUnit_Framework_TestCase {
                                                         array(2.46497, 48.71263), array(2.46746, 48.71277), array(2.46999, 48.71730)))));
     }
 
+    public function testVincenty() {
+        $alti = new alti\Alti($this->options);
+
+        $this->assertEquals($alti->vincentyDistance(2.2001, 48.80906, 2.19121, 48.80773), 669.53);
+        $this->assertEquals($alti->vincentyDistance(array(2.2001, 48.80906), array(2.19121, 48.80773)), 669.53);
+    }
+
     public function testInterpolate() {
         $alti = new alti\Alti($this->options);
 
@@ -91,14 +98,14 @@ class AltiTest extends PHPUnit_Framework_TestCase {
         $dist = 0;
         $previous = $comps[0];
         foreach (array_slice($comps, 1) as $point) {
-            $dist += alti\vincentyDistance($previous[0], $previous[1], $point[0], $point[1]);
+            $dist += $alti->vincentyDistance($previous[0], $previous[1], $point[0], $point[1]);
             $previous = $point;
         }
 
         $int_dist = 0;
         $previous = $comps[0];
         foreach (array_slice($interpolate, 1) as $point) {
-            $int_dist += alti\vincentyDistance($previous[0], $previous[1], $point[0], $point[1]);
+            $int_dist += $alti->vincentyDistance($previous[0], $previous[1], $point[0], $point[1]);
             $previous = $point;
         }
         $this->assertEquals($dist, $int_dist);

@@ -3,8 +3,8 @@
     published under the modifier BSD license. */
 
 class SrtmpostgisTest extends PHPUnit_Framework_TestCase {
-//    private $options = array('source' => 'srtmpostgis');
-    private $options = array('source' => 'srtmpostgis', 'dbname' => 'srtm', 'dbuser' => 'arno', 'dbpassword' => '');
+    private $options = array('source' => 'srtmpostgis');
+//    private $options = array('source' => 'srtmpostgis', 'dbname' => 'srtm', 'dbuser' => 'arno', 'dbpassword' => '');
 
     public function testAltitude () {
         $alti = new alti\Alti($this->options);

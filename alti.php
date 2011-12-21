@@ -6,65 +6,6 @@ namespace alti;
 
 include_once realpath(__DIR__ . '/datasource.php');
 
-/*
- * Calculates the distance between two points on earth surface
- *
- * @param float $p1lon first point longitude
- * @param float $p1lat first point latitude
- * @param float $p2lon second point longitude
- * @param float $p2lat second point latitude
- * @return float distance between points in meters
- */
-function vincentyDistance($p1lon, $p1lat, $p2lon, $p2lat) {
-    /* this function is a port to php from OpenLayers
-       OpenLayers.Util.distVincenty javascript function */
-    $a = 6378137;
-    $b = 6356752.3142;
-    $f = 1/298.257223563;
-
-    $L = deg2rad($p2lon - $p1lon);
-    $U1 = atan((1-$f) * tan(deg2rad($p1lat)));
-    $U2 = atan((1-$f) * tan(deg2rad($p2lat)));
-    $sinU1 = sin($U1);
-    $cosU1 = cos($U1);
-    $sinU2 = sin($U2);
-    $cosU2 = cos($U2);
-
-    $lambda = $L;
-    $lambdaP = 2 * pi();
-    $iterLimit = 20;
-
-    while (abs ($lambda - $lambdaP) > 1e-12 && --$iterLimit > 0) {
-        $sinLambda = sin($lambda);
-        $cosLambda = cos($lambda);
-        $sinSigma = sqrt(($cosU2 * $sinLambda) * ($cosU2 * $sinLambda) +
-                ($cosU1 * $sinU2 - $sinU1 * $cosU2 * $cosLambda) * ($cosU1 * $sinU2 - $sinU1 * $cosU2 * $cosLambda));
-        if ($sinSigma==0) {
-            return 0;  // co-incident points
-        }
-        $cosSigma = $sinU1 * $sinU2 + $cosU1 * $cosU2 * $cosLambda;
-        $sigma = atan2($sinSigma, $cosSigma);
-        $alpha = asin($cosU1 * $cosU2 * $sinLambda / $sinSigma);
-        $cosSqAlpha = cos($alpha) * cos($alpha);
-        $cos2SigmaM = $cosSigma - 2 * $sinU1 * $sinU2 / $cosSqAlpha;
-        $C = $f / 16 * $cosSqAlpha * (4 + $f * (4 - 3 * $cosSqAlpha));
-        $lambdaP = $lambda;
-        $lambda = $L + (1 - $C) * $f * sin($alpha) *
-            ($sigma + $C * $sinSigma * ($cos2SigmaM + $C * $cosSigma * (-1 + 2 * $cos2SigmaM * $cos2SigmaM)));
-    }
-    if ($iterLimit==0) {
-        return null;  // formula failed to converge
-    }
-
-    $uSq = $cosSqAlpha * ($a * $a - $b * $b) / ($b * $b);
-    $A = 1 + $uSq / 16384 * (4096 + $uSq * (-768 + $uSq * (320 - 175 * $uSq)));
-    $B = $uSq / 1024 * (256 + $uSq * (-128 + $uSq * (74 - 47 * $uSq)));
-    $deltaSigma = $B * $sinSigma * ($cos2SigmaM + $B / 4 * ($cosSigma * (-1 + 2 * $cos2SigmaM * $cos2SigmaM) -
-        $B / 6 * $cos2SigmaM * (-3 + 4 * $sinSigma * $sinSigma) * (-3 + 4 * $cos2SigmaM * $cos2SigmaM)));
-    $s = $b * $A * ($sigma - $deltaSigma);
-    return round($s, 3); // round to 1mm precision
-};
-
 class Alti {
     /**
      * @var string datasource backend
@@ -111,6 +52,71 @@ class Alti {
         $this->source = new $className($sourceoptions);
     }
 
+    /*
+     * Calculates the distance between two points on earth surface
+     *
+     * @param float $p1lon first point longitude
+     * @param float $p1lat first point latitude
+     * @param float $p2lon second point longitude
+     * @param float $p2lat second point latitude
+     * @return float distance between points in meters
+     */
+    public function vincentyDistance($p1lon, $p1lat, $p2lon = null, $p2lat = null) {
+        if ($p1lon instanceof \gisconverter\Point and $p1lat instanceof \gisconverter\Point) {
+            return $this->vincentyDistance($p1lon->lon, $p1lon->lat, $p1lat->lon, $p1lat->lat);
+        } else if (is_array($p1lon) and is_array($p1lat))  {
+            return $this->vincentyDistance($p1lon[0], $p1lon[1], $p1lat[0], $p1lat[1]);
+        }
+
+        /* this function is a port to php from OpenLayers
+           OpenLayers.Util.distVincenty javascript function */
+        $a = 6378137;
+        $b = 6356752.3142;
+        $f = 1/298.257223563;
+
+        $L = deg2rad($p2lon - $p1lon);
+        $U1 = atan((1-$f) * tan(deg2rad($p1lat)));
+        $U2 = atan((1-$f) * tan(deg2rad($p2lat)));
+        $sinU1 = sin($U1);
+        $cosU1 = cos($U1);
+        $sinU2 = sin($U2);
+        $cosU2 = cos($U2);
+
+        $lambda = $L;
+        $lambdaP = 2 * pi();
+        $iterLimit = 20;
+
+        while (abs ($lambda - $lambdaP) > 1e-12 && --$iterLimit > 0) {
+            $sinLambda = sin($lambda);
+            $cosLambda = cos($lambda);
+            $sinSigma = sqrt(($cosU2 * $sinLambda) * ($cosU2 * $sinLambda) +
+                    ($cosU1 * $sinU2 - $sinU1 * $cosU2 * $cosLambda) * ($cosU1 * $sinU2 - $sinU1 * $cosU2 * $cosLambda));
+            if ($sinSigma==0) {
+                return 0;  // co-incident points
+            }
+            $cosSigma = $sinU1 * $sinU2 + $cosU1 * $cosU2 * $cosLambda;
+            $sigma = atan2($sinSigma, $cosSigma);
+            $alpha = asin($cosU1 * $cosU2 * $sinLambda / $sinSigma);
+            $cosSqAlpha = cos($alpha) * cos($alpha);
+            $cos2SigmaM = $cosSigma - 2 * $sinU1 * $sinU2 / $cosSqAlpha;
+            $C = $f / 16 * $cosSqAlpha * (4 + $f * (4 - 3 * $cosSqAlpha));
+            $lambdaP = $lambda;
+            $lambda = $L + (1 - $C) * $f * sin($alpha) *
+                ($sigma + $C * $sinSigma * ($cos2SigmaM + $C * $cosSigma * (-1 + 2 * $cos2SigmaM * $cos2SigmaM)));
+        }
+        if ($iterLimit==0) {
+            return null;  // formula failed to converge
+        }
+
+        $uSq = $cosSqAlpha * ($a * $a - $b * $b) / ($b * $b);
+        $A = 1 + $uSq / 16384 * (4096 + $uSq * (-768 + $uSq * (320 - 175 * $uSq)));
+        $B = $uSq / 1024 * (256 + $uSq * (-128 + $uSq * (74 - 47 * $uSq)));
+        $deltaSigma = $B * $sinSigma * ($cos2SigmaM + $B / 4 * ($cosSigma * (-1 + 2 * $cos2SigmaM * $cos2SigmaM) -
+            $B / 6 * $cos2SigmaM * (-3 + 4 * $sinSigma * $sinSigma) * (-3 + 4 * $cos2SigmaM * $cos2SigmaM)));
+        $s = $b * $A * ($sigma - $deltaSigma);
+        return round($s, 3); // round to 1mm precision
+    }
+
     /**
      * interpolate an array of points by adding extra points to the route, so
      * that points are not separated by more than source precision.
@@ -141,7 +147,7 @@ class Alti {
                 return $path;
             }
             if ($prev and $curr) {
-                $dist = vincentyDistance($prev[0], $prev[1], $curr[0], $curr[1]);
+                $dist = $this->vincentyDistance($prev[0], $prev[1], $curr[0], $curr[1]);
                 if ($dist > $precision) {
                     $numpoints = floor($dist / $precision);
                     $dlon = ($curr[0] - $prev[0]) / ($numpoints + 1);
