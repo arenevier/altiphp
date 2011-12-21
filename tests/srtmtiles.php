@@ -65,16 +65,6 @@ class SrtmtilesTest extends PHPUnit_Framework_TestCase {
         $this->assertEquals(array_map('round', $alti->altitude(array(array(2.1, 48.1), array(1.9, 48.1)), FALSE)), array(121.0, 126.0));
     }
 
-    public function testInterpolate() {
-        $alti = new alti\Alti($this->options);
-
-        $this->assertEquals($alti->interpolate(array(array(2.2001,48.80906), array(2.19121,48.80773), array(2.18819,48.80749))),
-            array(array(2.2001, 48.80906), array(2.20121125, 48.80922625), array(2.2023225, 48.8093925),
-                 array(2.20343375, 48.80955875), array(2.204545, 48.809725), array(2.20565625, 48.80989125),
-                 array(2.2067675, 48.8100575), array(2.20787875, 48.81022375), array(2.19121, 48.80773),
-                 array(2.1922166666667, 48.80781), array(2.1932233333333, 48.80789), array(2.18819, 48.80749)));
-    }
-
     public function testCoverage() {
         $alti = new alti\Alti($this->options);
         $this->assertFalse($alti->isCovered(142.2, 11.35)); // Mariana Trench

@@ -80,6 +80,30 @@ class AltiTest extends PHPUnit_Framework_TestCase {
                                                         array(2.46497, 48.71263), array(2.46746, 48.71277), array(2.46999, 48.71730)))));
     }
 
+    public function testInterpolate() {
+        $alti = new alti\Alti($this->options);
+
+        $comps = array(array(2.2001,48.80906), array(2.19121,48.80773), array(2.18819,48.80749));
+        $interpolate = $alti->interpolate($comps);
+
+        $this->assertGreaterThanOrEqual(count($comps), count($interpolate));
+
+        $dist = 0;
+        $previous = $comps[0];
+        foreach (array_slice($comps, 1) as $point) {
+            $dist += alti\vincentyDistance($previous[0], $previous[1], $point[0], $point[1]);
+            $previous = $point;
+        }
+
+        $int_dist = 0;
+        $previous = $comps[0];
+        foreach (array_slice($interpolate, 1) as $point) {
+            $int_dist += alti\vincentyDistance($previous[0], $previous[1], $point[0], $point[1]);
+            $previous = $point;
+        }
+        $this->assertEquals($dist, $int_dist);
+    }
+
     public function testCoverage() {
         $alti = new alti\Alti($this->options);
 

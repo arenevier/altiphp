@@ -144,8 +144,8 @@ class Alti {
                 $dist = vincentyDistance($prev[0], $prev[1], $curr[0], $curr[1]);
                 if ($dist > $precision) {
                     $numpoints = floor($dist / $precision);
-                    $dlon = ($prev[0] - $curr[0]) / ($numpoints + 1);
-                    $dlat = ($prev[1] - $curr[1]) / ($numpoints + 1);
+                    $dlon = ($curr[0] - $prev[0]) / ($numpoints + 1);
+                    $dlat = ($curr[1] - $prev[1]) / ($numpoints + 1);
                     foreach (range (1, $numpoints) as $i) {
                         $res[] = array($prev[0] + $dlon * $i, $prev[1] + $dlat * $i);
                     }
@@ -153,7 +153,6 @@ class Alti {
             }
             $res[] = $comp;
         }
-        $path = $res;
         return $res;
     }
 
