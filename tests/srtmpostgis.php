@@ -27,12 +27,6 @@ class SrtmpostgisTest extends PHPUnit_Framework_TestCase {
         $this->assertNull($alti->altitude(6.865, 45.83361)); // Mont Blanc
     }
 
-    public function testArrayNull() {
-        $alti = new alti\Alti($this->options);
-
-        $this->assertNull($alti->altitude(array(array(142.2, 11.35), array(37.35333, -3.07583)), FALSE)); // contains one null altitude
-    }
-
     public function testCoverage() {
         $alti = new alti\Alti($this->options);
 
@@ -43,7 +37,6 @@ class SrtmpostgisTest extends PHPUnit_Framework_TestCase {
         $this->assertNull($alti->altitude(10.38333, 63.41667)); //
 
         $this->assertFalse($alti->isCovered(array(array(2.343, 48.8861), array(142.2, 11.35)))); // has one invalid point
-        $this->assertNull($alti->altitude(array(array(2.343, 48.8861), array(142.2, 11.35))));
     }
 
 }

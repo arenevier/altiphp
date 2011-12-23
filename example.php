@@ -43,10 +43,3 @@
         $geometry = $decoder->geomFromText('LINESTRING(2.4606 48.70408, 2.46338 48.70815)');
         var_dump($service->altitude($geometry)); // an array of altitude
     }
-
-    // with srtmtiles backend, you can set a limit on the number of loaded tiles
-    $service = new alti\Alti(array('source' => 'srtmtiles', 'maxtilesloaded' => 2));
-    try {
-        $service->altitude(array(array(2.1, 48.1), array(1.9, 48.1), array(1.9, 47.9)));
-    } catch (\OverflowException $e) { // an OverflowException is raised
-    }

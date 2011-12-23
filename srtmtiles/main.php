@@ -33,11 +33,6 @@ class SrtmtilesDataSource implements DataSource {
     protected $httpbackend = null;
 
     /**
-     * @var int max tiles to load
-     */
-    protected $maxtilesloaded = 0;
-
-    /**
      * @var array holding tiles data in memory
      */
     protected $tiles = array();
@@ -107,12 +102,6 @@ class SrtmtilesDataSource implements DataSource {
     protected function setOptions(array $options = array()) {
         $this->setDataDir(isset($options['cache'])? $options['cache']: null);
         $this->setHttpBackend(isset($options['httpbackend'])? $options['httpbackend']: null);
-        if (isset($options['maxtilesloaded'])) {
-            $this->maxtilesloaded = (int) $options['maxtilesloaded'];
-            if ($this->maxtilesloaded < 0) {
-                $this->maxtilesloaded = 0;
-            }
-        }
     }
 
     /**
@@ -340,10 +329,6 @@ class SrtmtilesDataSource implements DataSource {
             return null;
         }
 
-        if ($this->maxtilesloaded && (count($this->tiles) + 1 > $this->maxtilesloaded)) {
-            throw new \OverflowException();
-        }
-
         // XXX: we could save unzipped file in the cache, but that would require
         // more hard drive space, so we only save zipped files
         $archive = $this->unzip($zipfile);
@@ -436,7 +421,7 @@ class SrtmTile {
     /**
      * @var array tile data
      */
-    protected $data = array();
+    protected $data = null;
 
     /**
      * Constructor
@@ -444,27 +429,31 @@ class SrtmTile {
      * @param string $file uncompressed data file
      */
     public function __construct($file) {
-        if (($fh = @fopen($file, 'r+b')) === FALSE) {
-            throw new \Exception("could not open " . $file . " file");
-        }
         if (filesize($file) == 0) {
             throw new \Exception ("invalid SRTM data " . $file);
         }
-        $contents = @fread($fh, filesize($file));
-        if ($contents === FALSE) {
-            throw new \Exception("could not open " . $file . " file");
-        }
-        $size = (int)sqrt(strlen($contents)/2) - 1;
+
+        $size = (int)sqrt(filesize($file)/2) - 1;
         if ($size !== self::size) {
             throw new \Exception ("invalid SRTM data " . $file);
         }
-        // XXX: we get UNsigned integers. We will need to check when retrieving
-        // the data.
-        $data = unpack('n*', $contents); 
-        if (count($data) !== (($size + 1) * ($size + 1))) {
-            throw new \Exception ("invalid SRTM data " . $file);
+
+        if (($fh = @fopen($file, 'r+b')) === FALSE) {
+            throw new \Exception("could not open " . $file . " file");
         }
-        $this->data = $data;
+
+        $this->data = $fh;
+    }
+
+    /**
+     * Destructor
+     *
+     * @param string $file uncompressed data file
+     */
+    public function __destruct() {
+        if ($this->data) {
+            fclose($this->data);
+        }
     }
 
     /**
@@ -480,7 +469,7 @@ class SrtmTile {
         $top = ceil($dy * self::size) - 1;
         $bottom = $top + 1;
 
-        $tl = $this->data[$top * (self::size + 1) + $left + 1]; // f01
+        $tl = $this->dataAtOffset($top * (self::size + 1) + $left + 1); // f01
         if($tl >= pow(2, 15)) {
             $tl -= pow(2, 16); 
         }
@@ -488,7 +477,7 @@ class SrtmTile {
             return null;
         }
 
-        $tr = $this->data[$top * (self::size + 1) + $right + 1]; // f11
+        $tr = $this->dataAtOffset($top * (self::size + 1) + $right + 1); // f11
         if($tr >= pow(2, 15)) {
             $tr -= pow(2, 16); 
         }
@@ -496,7 +485,7 @@ class SrtmTile {
             return null;
         }
 
-        $bl = $this->data[$bottom * (self::size + 1) + $left + 1]; // f00
+        $bl = $this->dataAtOffset($bottom * (self::size + 1) + $left + 1); // f00
         if ($bl === 32768 or $bl === -32768) {
             return null;
         }
@@ -504,7 +493,7 @@ class SrtmTile {
             $bl -= pow(2, 16); 
         }
 
-        $br = $this->data[$bottom * (self::size + 1) + $right + 1]; // f10
+        $br = $this->dataAtOffset($bottom * (self::size + 1) + $right + 1); // f10
         if ($br === 32768 or $br === -32768) {
             return null;
         }
@@ -516,5 +505,12 @@ class SrtmTile {
         $a = $dy * self::size - $top;
         $b = $dx * self::size - $left;
         return $tl + ($bl - $tl) * $a + ($tr - $tl) * $b + ($tl - $bl - $tr + $br) * $a * $b;
+    }
+
+    protected function dataAtOffset($offset) {
+        fseek($this->data, $offset * 2 - 2);
+        $contents = fread($this->data, 2);
+        $data = unpack('n', $contents); 
+        return $data[1];
     }
 }
