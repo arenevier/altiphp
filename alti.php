@@ -185,9 +185,6 @@ class Alti {
             $res = array();
             foreach ($arg as $comp) {
                 $altitude = $this->altitude($comp);
-                if (is_null($altitude)) { // altitude could not be computed
-                    return null;
-                }
                 $res[] = $altitude;
             }
             return $res;
