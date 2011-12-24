@@ -188,7 +188,7 @@ class SrtmtilesDataSource implements DataSource {
      * @return string
      */
     protected function fileFor($area) {
-        $target = $this->datadir . '/' . $area . '.hgt.zip';
+        $target = $this->datadir . '/' . $area . '.hgt';
         if (file_exists($target)) {
             return $target;
         }
@@ -200,9 +200,11 @@ class SrtmtilesDataSource implements DataSource {
             @touch($target);
             return $target;
         }
-        if (!$this->download(self::BASEURL . $data['path'], $target, $data['md5'])) {
+        $download = $this->download(self::BASEURL . $data['path'], $data['md5']);
+        if (!$download) {
             return null;
         }
+        $this->unzip($download, $target);
         return $target;
     }
 
@@ -211,27 +213,28 @@ class SrtmtilesDataSource implements DataSource {
      * matches.
      *
      * @param string $url url to download
-     * @param string $target directory where to put file once it's downloaded
      * @param string $md5sum expected md5sum of file content
-     * @return bool TRUE if success, FALSE otherwise
+     * @return string full path of downloaded tile
      */
-    protected function download($url, $target, $md5sum = "") {
+    protected function download($url, $md5sum = "") {
+        $target = $this->tmpdir . "/" . basename($url);
+
         if (($fh = @fopen($target, 'w')) === FALSE) {
             throw new \Exception("could not open " . $target . " in write mode");
         }
         $method = 'download' . ucfirst($this->httpbackend);
         if (!$this->$method($url, $fh)) {
             @fclose($fh);
-            return FALSE;
+            return null;
         }
         @fclose($fh);
 
         if ($md5sum) {
             if (md5_file($target) !== "$md5sum") {
-                throw new \Exception ("invalid checksum for " . $target);
+                throw new \Exception ("invalid checksum for " . basename($target));
             }
         }
-        return TRUE;
+        return $target;
     }
 
     /**
@@ -285,10 +288,10 @@ class SrtmtilesDataSource implements DataSource {
     /**
      * unzip a tile
      *
-     * @param string $file path of target file
-     * @return string full path of extracted tile
+     * @param string $file path of zipped file
+     * @path string $target path to extract the file
      */
-    protected function unzip($file) {
+    protected function unzip($file, $target) {
         $za = new \ZipArchive();
         if (@$za->open($file) === FALSE) {
             throw new \Exception ("invalid zip file " . $file);
@@ -311,7 +314,7 @@ class SrtmtilesDataSource implements DataSource {
             throw new \Exception ("could not extract archive " . $archive);
         }
         @$za->close();
-        return $this->tmpdir . '/' . $archive;
+        @rename($this->tmpdir . '/' . $archive, $target);
     }
 
     /**
@@ -324,17 +327,11 @@ class SrtmtilesDataSource implements DataSource {
         if (isset($this->tiles[$area])) {
             return $this->tiles[$area];
         }
-        $zipfile = $this->fileFor($area);
-        if (!$zipfile or !file_exists($zipfile) or filesize($zipfile) === 0) {
+        $archive = $this->fileFor($area);
+        if (!$archive or filesize($archive) === 0) {
             return null;
         }
 
-        // XXX: we could save unzipped file in the cache, but that would require
-        // more hard drive space, so we only save zipped files
-        $archive = $this->unzip($zipfile);
-        if (!$archive or !file_exists($archive)) {
-            return null;
-        }
         $this->tiles[$area] = new SrtmTile($archive);
         return $this->tiles[$area];
     }
@@ -390,7 +387,7 @@ class SrtmtilesDataSource implements DataSource {
      */
     public function isCovered($lon, $lat) {
         $area = $this->constructArea($lon, $lat);
-        $target = $this->datadir . '/' . $area . '.hgt.zip';
+        $target = $this->datadir . '/' . $area . '.hgt';
         if (file_exists($target)) {
             return filesize($target) != 0;
         }
